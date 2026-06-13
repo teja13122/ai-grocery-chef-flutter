@@ -51,14 +51,89 @@ class GeminiService {
       {'text': prompt},
     ];
     if (imageBytes != null) {
-      parts.add({
-        'inline_data': {
-          'mime_type': imageMimeType ?? 'image/jpeg',
-          'data': base64Encode(imageBytes),
-        },
-      });
+      parts.add(_imagePart(imageBytes, imageMimeType));
     }
 
+    final text = await _requestText(parts, temperature: 0.7);
+    final Map<String, dynamic> recipeJson;
+    try {
+      recipeJson = jsonDecode(_stripCodeFences(text)) as Map<String, dynamic>;
+    } catch (_) {
+      throw GeminiException(
+        'The AI returned an unexpected format. Please try again.',
+      );
+    }
+
+    return Recipe.fromAi(recipeJson);
+  }
+
+  /// Looks at a pantry/fridge photo and returns the food ingredients the model
+  /// can clearly identify (lowercase, de-duplicated, no guesses).
+  Future<List<String>> detectIngredients({
+    required Uint8List imageBytes,
+    String? imageMimeType,
+  }) async {
+    if (!ApiConfig.isConfigured) {
+      throw GeminiException(
+        'No Gemini API key set. Add a free key in lib/config/api_config.dart '
+        'or pass --dart-define=GEMINI_API_KEY=your_key.',
+      );
+    }
+
+    const prompt = '''
+You are a food recognition assistant. Look at the attached photo of a fridge,
+pantry, or set of groceries and identify the distinct, edible food ingredients
+you can clearly see.
+
+Return ONLY valid JSON in exactly this shape:
+{ "items": string[] }
+
+Rules:
+- Use simple, lowercase ingredient names (e.g. "eggs", "tomato", "milk").
+- Only include items you can clearly identify; never guess or invent.
+- Merge duplicates and drop brand names, packaging, and non-food objects.
+- If you cannot identify any food, return { "items": [] }.
+''';
+
+    final parts = <Map<String, dynamic>>[
+      {'text': prompt},
+      _imagePart(imageBytes, imageMimeType),
+    ];
+
+    final text = await _requestText(parts, temperature: 0.2);
+    final Map<String, dynamic> json;
+    try {
+      json = jsonDecode(_stripCodeFences(text)) as Map<String, dynamic>;
+    } catch (_) {
+      throw GeminiException(
+        'The AI returned an unexpected format. Please try again.',
+      );
+    }
+
+    final raw = json['items'] as List? ?? const [];
+    final seen = <String>{};
+    final items = <String>[];
+    for (final entry in raw) {
+      final name = entry.toString().trim();
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      if (seen.add(key)) items.add(name);
+    }
+    return items;
+  }
+
+  Map<String, dynamic> _imagePart(Uint8List bytes, String? mimeType) => {
+        'inline_data': {
+          'mime_type': mimeType ?? 'image/jpeg',
+          'data': base64Encode(bytes),
+        },
+      };
+
+  /// Posts [parts] to the model in JSON mode and returns the raw text payload.
+  Future<String> _requestText(
+    List<Map<String, dynamic>> parts, {
+    double temperature = 0.7,
+  }) async {
     final uri = Uri.parse(
       '$_baseUrl/${ApiConfig.model}:generateContent?key=${ApiConfig.geminiApiKey}',
     );
@@ -68,7 +143,7 @@ class GeminiService {
         {'parts': parts},
       ],
       'generationConfig': {
-        'temperature': 0.7,
+        'temperature': temperature,
         // Force clean JSON so Flutter parsing stays simple.
         'responseMimeType': 'application/json',
       },
@@ -94,17 +169,7 @@ class GeminiService {
       );
     }
 
-    final text = _extractText(response.body);
-    final Map<String, dynamic> recipeJson;
-    try {
-      recipeJson = jsonDecode(_stripCodeFences(text)) as Map<String, dynamic>;
-    } catch (_) {
-      throw GeminiException(
-        'The AI returned an unexpected format. Please try again.',
-      );
-    }
-
-    return Recipe.fromAi(recipeJson);
+    return _extractText(response.body);
   }
 
   /// The system prompt documented in the project paper.

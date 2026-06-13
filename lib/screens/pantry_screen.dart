@@ -48,6 +48,27 @@ class _PantryScreenState extends State<PantryScreen> {
               ? 'image/png'
               : 'image/jpeg');
       pantry.setPhoto(bytes, mimeType: mime);
+
+      // Ask the AI to identify ingredients visible in the photo.
+      final found = await pantry.identifyItemsFromPhoto();
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      if (pantry.detectError != null) {
+        messenger.showSnackBar(SnackBar(content: Text(pantry.detectError!)));
+      } else if (found.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('No items identified in the photo.')),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Identified ${found.length} '
+              'item${found.length == 1 ? '' : 's'}: ${found.join(', ')}',
+            ),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -186,6 +207,12 @@ class _PantryScreenState extends State<PantryScreen> {
 
           // --- Photo input ---
           const _SectionLabel('Pantry photo (optional)'),
+          const SizedBox(height: 4),
+          Text(
+            'Add a photo and AI will identify the items for you.',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: Colors.grey.shade600),
+          ),
           const SizedBox(height: 8),
           _PhotoPicker(
             pantry: pantry,
@@ -319,6 +346,35 @@ class _PhotoPicker extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
+          if (pantry.isDetecting)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  color: Colors.black54,
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Identifying items…',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             top: 8,
             right: 8,
