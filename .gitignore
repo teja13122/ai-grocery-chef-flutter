@@ -1,0 +1,20 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local secrets — never commit your API key
+lib/config/secrets.dart
+.env
+
+# OS
+.DS_Store
+Thumbs.db
