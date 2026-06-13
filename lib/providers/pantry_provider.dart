@@ -27,6 +27,10 @@ class PantryProvider extends ChangeNotifier {
   String _allergies = '';
   int _maxCookTimeMin = 30;
 
+  // Target calories per serving (range the user wants the meal to fall in).
+  int _minCalories = 300;
+  int _maxCalories = 700;
+
   Uint8List? _photoBytes;
   String? _photoMimeType;
 
@@ -38,6 +42,8 @@ class PantryProvider extends ChangeNotifier {
   Diet get diet => _diet;
   String get allergies => _allergies;
   int get maxCookTimeMin => _maxCookTimeMin;
+  int get minCalories => _minCalories;
+  int get maxCalories => _maxCalories;
   Uint8List? get photoBytes => _photoBytes;
   String? get photoMimeType => _photoMimeType;
   bool get hasPhoto => _photoBytes != null;
@@ -80,6 +86,12 @@ class PantryProvider extends ChangeNotifier {
 
   void setMaxCookTime(int minutes) {
     _maxCookTimeMin = minutes;
+    notifyListeners();
+  }
+
+  void setCalorieRange(int min, int max) {
+    _minCalories = min;
+    _maxCalories = max;
     notifyListeners();
   }
 

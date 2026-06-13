@@ -45,20 +45,32 @@ class RecipeView extends StatelessWidget {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             _MetaPill(
               icon: Icons.schedule,
               label: '${recipe.cookTimeMin} min',
             ),
-            const SizedBox(width: 8),
             _MetaPill(
               icon: Icons.local_fire_department_outlined,
               label: recipe.difficulty,
             ),
+            if (recipe.servings > 0)
+              _MetaPill(
+                icon: Icons.people_alt_outlined,
+                label: '${recipe.servings} '
+                    'serving${recipe.servings == 1 ? '' : 's'}',
+              ),
           ],
         ),
         const SizedBox(height: 20),
+
+        if (recipe.hasNutrition) ...[
+          _NutritionCard(recipe: recipe),
+          const SizedBox(height: 16),
+        ],
 
         _Section(
           icon: Icons.check_circle_outline,
@@ -254,6 +266,215 @@ class _MetaPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Visual nutrition panel: a calorie badge plus colored macro bars.
+class _NutritionCard extends StatelessWidget {
+  const _NutritionCard({required this.recipe});
+  final Recipe recipe;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Approximate calories from each macro to size the bars proportionally.
+    final proteinCals = recipe.proteinG * 4;
+    final carbsCals = recipe.carbsG * 4;
+    final fatCals = recipe.fatG * 9;
+    final totalMacroCals =
+        (proteinCals + carbsCals + fatCals).clamp(1, 1 << 31);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2E7D32), Color(0xFF43A047)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.monitor_heart_outlined, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                'Nutrition (per serving)',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // Calorie badge
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${recipe.calories}',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Text(
+                      'kcal',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 18),
+              // Macro bars
+              Expanded(
+                child: Column(
+                  children: [
+                    _MacroBar(
+                      label: 'Protein',
+                      grams: recipe.proteinG,
+                      fraction: proteinCals / totalMacroCals,
+                      color: const Color(0xFFFFD54F),
+                    ),
+                    const SizedBox(height: 10),
+                    _MacroBar(
+                      label: 'Carbs',
+                      grams: recipe.carbsG,
+                      fraction: carbsCals / totalMacroCals,
+                      color: const Color(0xFF81D4FA),
+                    ),
+                    const SizedBox(height: 10),
+                    _MacroBar(
+                      label: 'Fat',
+                      grams: recipe.fatG,
+                      fraction: fatCals / totalMacroCals,
+                      color: const Color(0xFFFF8A65),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (recipe.fiberG > 0) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Icon(Icons.grass, color: Colors.white70, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  'Fiber: ${recipe.fiberG} g',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ],
+          if (recipe.nutritionNote.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      recipe.nutritionNote,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroBar extends StatelessWidget {
+  const _MacroBar({
+    required this.label,
+    required this.grams,
+    required this.fraction,
+    required this.color,
+  });
+
+  final String label;
+  final int grams;
+  final double fraction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '$grams g',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: fraction.isFinite ? fraction.clamp(0.0, 1.0) : 0.0,
+            minHeight: 8,
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
     );
   }
 }

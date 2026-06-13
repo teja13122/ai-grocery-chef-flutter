@@ -16,6 +16,15 @@ class Recipe {
   final String safetyNotes;
   final DateTime savedAt;
 
+  // --- Nutrition (per serving) ---
+  final int calories;
+  final int proteinG;
+  final int carbsG;
+  final int fatG;
+  final int fiberG;
+  final int servings;
+  final String nutritionNote;
+
   Recipe({
     required this.id,
     required this.title,
@@ -27,11 +36,22 @@ class Recipe {
     required this.substitutions,
     required this.safetyNotes,
     required this.savedAt,
+    this.calories = 0,
+    this.proteinG = 0,
+    this.carbsG = 0,
+    this.fatG = 0,
+    this.fiberG = 0,
+    this.servings = 1,
+    this.nutritionNote = '',
   });
 
   /// True when the model decided the pantry was not enough for a real meal.
   bool get isInsufficient =>
       title.trim().toLowerCase() == 'insufficient ingredients';
+
+  /// True when the AI provided at least some nutrition data.
+  bool get hasNutrition =>
+      calories > 0 || proteinG > 0 || carbsG > 0 || fatG > 0;
 
   /// Builds a [Recipe] from the JSON object returned by Gemini.
   factory Recipe.fromAi(Map<String, dynamic> json) {
@@ -53,6 +73,9 @@ class Recipe {
       return 0;
     }
 
+    final nutrition = json['nutrition'];
+    final n = nutrition is Map ? Map<String, dynamic>.from(nutrition) : json;
+
     return Recipe(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       title: (json['title'] ?? 'Untitled recipe').toString().trim(),
@@ -64,6 +87,13 @@ class Recipe {
       substitutions: asStringList(json['substitutions']),
       safetyNotes: (json['safety_notes'] ?? '').toString().trim(),
       savedAt: DateTime.now(),
+      calories: asInt(n['calories'] ?? n['calories_per_serving']),
+      proteinG: asInt(n['protein_g'] ?? n['protein']),
+      carbsG: asInt(n['carbs_g'] ?? n['carbohydrates_g'] ?? n['carbs']),
+      fatG: asInt(n['fat_g'] ?? n['fat']),
+      fiberG: asInt(n['fiber_g'] ?? n['fiber']),
+      servings: asInt(json['servings']) == 0 ? 1 : asInt(json['servings']),
+      nutritionNote: (n['nutrition_note'] ?? n['note'] ?? '').toString().trim(),
     );
   }
 }
@@ -79,6 +109,8 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
     final map = Map<String, dynamic>.from(reader.readMap());
     List<String> list(dynamic v) =>
         (v as List?)?.map((e) => e.toString()).toList() ?? <String>[];
+    int intOr(dynamic v, [int fallback = 0]) =>
+        v is int ? v : (v is double ? v.round() : fallback);
     return Recipe(
       id: map['id'] as String,
       title: map['title'] as String,
@@ -90,6 +122,13 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       substitutions: list(map['substitutions']),
       safetyNotes: map['safetyNotes'] as String,
       savedAt: DateTime.fromMillisecondsSinceEpoch(map['savedAt'] as int),
+      calories: intOr(map['calories']),
+      proteinG: intOr(map['proteinG']),
+      carbsG: intOr(map['carbsG']),
+      fatG: intOr(map['fatG']),
+      fiberG: intOr(map['fiberG']),
+      servings: intOr(map['servings'], 1),
+      nutritionNote: (map['nutritionNote'] ?? '').toString(),
     );
   }
 
@@ -106,6 +145,13 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       'substitutions': obj.substitutions,
       'safetyNotes': obj.safetyNotes,
       'savedAt': obj.savedAt.millisecondsSinceEpoch,
+      'calories': obj.calories,
+      'proteinG': obj.proteinG,
+      'carbsG': obj.carbsG,
+      'fatG': obj.fatG,
+      'fiberG': obj.fiberG,
+      'servings': obj.servings,
+      'nutritionNote': obj.nutritionNote,
     });
   }
 }

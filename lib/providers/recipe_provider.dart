@@ -40,6 +40,8 @@ class RecipeProvider extends ChangeNotifier {
         diet: pantry.diet.promptValue,
         allergies: pantry.allergies,
         maxCookTimeMin: pantry.maxCookTimeMin,
+        minCalories: pantry.minCalories,
+        maxCalories: pantry.maxCalories,
         imageBytes: pantry.photoBytes,
         imageMimeType: pantry.photoMimeType,
       );

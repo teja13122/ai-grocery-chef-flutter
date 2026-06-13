@@ -29,6 +29,8 @@ class GeminiService {
     required String diet,
     required String allergies,
     required int maxCookTimeMin,
+    int minCalories = 0,
+    int maxCalories = 0,
     Uint8List? imageBytes,
     String? imageMimeType,
   }) async {
@@ -44,6 +46,8 @@ class GeminiService {
       diet: diet,
       allergies: allergies,
       maxCookTimeMin: maxCookTimeMin,
+      minCalories: minCalories,
+      maxCalories: maxCalories,
       hasPhoto: imageBytes != null,
     );
 
@@ -178,6 +182,8 @@ Rules:
     required String diet,
     required String allergies,
     required int maxCookTimeMin,
+    required int minCalories,
+    required int maxCalories,
     required bool hasPhoto,
   }) {
     final ingredientList =
@@ -187,6 +193,9 @@ Rules:
             'visible ingredients from the photo, but never invent items you '
             'cannot see or that were not listed.'
         : '';
+    final calorieNote = (minCalories > 0 || maxCalories > 0)
+        ? 'Aim for roughly $minCalories–$maxCalories calories per serving.'
+        : 'No specific calorie target.';
 
     return '''
 You are a careful home cooking assistant.
@@ -196,6 +205,7 @@ Respect these constraints:
 - diet: ${diet.isEmpty ? 'no restriction' : diet}
 - allergies to avoid: ${allergies.isEmpty ? 'none' : allergies}
 - max cook time: $maxCookTimeMin minutes
+- calorie target: $calorieNote
 
 Return ONLY valid JSON with exactly these fields:
 {
@@ -206,6 +216,15 @@ Return ONLY valid JSON with exactly these fields:
   "cook_time_min": number,
   "difficulty": "Easy" | "Medium" | "Hard",
   "substitutions": string[],
+  "servings": number,
+  "nutrition": {
+    "calories": number,
+    "protein_g": number,
+    "carbs_g": number,
+    "fat_g": number,
+    "fiber_g": number,
+    "nutrition_note": string
+  },
   "safety_notes": string
 }
 
@@ -213,6 +232,9 @@ Rules:
 - Never include any ingredient the user is allergic to.
 - Honor the diet strictly (e.g. vegan = no animal products).
 - Keep total time within the max cook time.
+- Try to keep calories per serving within the requested target range.
+- All nutrition values are PER SERVING and must be realistic estimates.
+- In nutrition_note, give one short, friendly nutrition insight.
 - In safety_notes, briefly cover allergen awareness, safe cooking temperatures,
   and cross-contamination where relevant.
 - If the ingredients are insufficient for a complete meal, set "title" to

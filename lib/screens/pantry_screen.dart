@@ -139,16 +139,59 @@ class _PantryScreenState extends State<PantryScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Text(
-            "What's in your kitchen?",
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Add ingredients, set preferences, and let AI cook up a recipe.',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: Colors.grey.shade600),
+          // --- Hero banner ---
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "What's in your kitchen?",
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Add ingredients or a photo, set your calorie goal, '
+                        'and let AI cook up a recipe.',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.restaurant_menu,
+                      color: Colors.white, size: 32),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -271,6 +314,56 @@ class _PantryScreenState extends State<PantryScreen> {
             divisions: 11,
             label: '${pantry.maxCookTimeMin} min',
             onChanged: (v) => pantry.setMaxCookTime(v.round()),
+          ),
+
+          const SizedBox(height: 16),
+
+          // --- Calorie range ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const _SectionLabel('Calories per serving'),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.local_fire_department,
+                        size: 16, color: theme.colorScheme.secondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${pantry.minCalories}–${pantry.maxCalories} kcal',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          RangeSlider(
+            values: RangeValues(
+              pantry.minCalories.toDouble(),
+              pantry.maxCalories.toDouble(),
+            ),
+            min: 100,
+            max: 1500,
+            divisions: 28,
+            labels: RangeLabels(
+              '${pantry.minCalories}',
+              '${pantry.maxCalories}',
+            ),
+            onChanged: (values) => pantry.setCalorieRange(
+              values.start.round(),
+              values.end.round(),
+            ),
           ),
 
           const SizedBox(height: 16),
