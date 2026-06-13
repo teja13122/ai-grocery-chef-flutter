@@ -21,6 +21,9 @@ class ApiConfig {
   /// Free-tier, multimodal model (accepts text + images).
   static const String model = 'gemini-2.5-flash';
 
+  /// Image-generation model used to create an appetizing photo of the dish.
+  static const String imageModel = 'gemini-2.5-flash-image';
+
   static bool get isConfigured =>
       geminiApiKey.isNotEmpty &&
       geminiApiKey != 'PASTE_YOUR_GEMINI_API_KEY_HERE';

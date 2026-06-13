@@ -10,11 +10,13 @@ class RecipeProvider extends ChangeNotifier {
   final GeminiService _gemini = GeminiService();
 
   bool _isLoading = false;
+  bool _isGeneratingImage = false;
   String? _error;
   Recipe? _current;
   List<Recipe> _saved = [];
 
   bool get isLoading => _isLoading;
+  bool get isGeneratingImage => _isGeneratingImage;
   String? get error => _error;
   Recipe? get current => _current;
   List<Recipe> get saved => List.unmodifiable(_saved);
@@ -47,6 +49,10 @@ class RecipeProvider extends ChangeNotifier {
       );
       _isLoading = false;
       notifyListeners();
+
+      // Generate an appetizing dish photo in the background so the recipe text
+      // appears immediately. Failures are silent (image is optional).
+      await _generateDishImage();
       return true;
     } on GeminiException catch (e) {
       _error = e.message;
@@ -56,6 +62,29 @@ class RecipeProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return false;
+  }
+
+  /// Asks the AI for a photo of the current dish and attaches it.
+  Future<void> _generateDishImage() async {
+    final recipe = _current;
+    if (recipe == null || recipe.isInsufficient) return;
+
+    _isGeneratingImage = true;
+    notifyListeners();
+    try {
+      final bytes = await _gemini.generateDishImage(
+        title: recipe.title,
+        ingredients: recipe.ingredientsUsed,
+      );
+      if (bytes != null && _current?.id == recipe.id) {
+        _current = _current!.copyWith(imageBytes: bytes);
+      }
+    } catch (_) {
+      // Image generation is optional; ignore failures.
+    } finally {
+      _isGeneratingImage = false;
+      notifyListeners();
+    }
   }
 
   Future<void> saveCurrent() async {

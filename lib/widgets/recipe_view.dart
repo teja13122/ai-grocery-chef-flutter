@@ -5,10 +5,19 @@ import '../models/recipe.dart';
 /// Reusable, scrollable rendering of a [Recipe]. Used by the AI output screen
 /// and the saved-recipe detail view.
 class RecipeView extends StatelessWidget {
-  const RecipeView({super.key, required this.recipe, this.padding});
+  const RecipeView({
+    super.key,
+    required this.recipe,
+    this.padding,
+    this.isGeneratingImage = false,
+  });
 
   final Recipe recipe;
   final EdgeInsetsGeometry? padding;
+
+  /// When true, shows a "plating your dish" placeholder while the AI image
+  /// is still being generated.
+  final bool isGeneratingImage;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +48,13 @@ class RecipeView extends StatelessWidget {
     return ListView(
       padding: padding ?? const EdgeInsets.all(16),
       children: [
+        if (recipe.hasImage || isGeneratingImage) ...[
+          _HeroImage(
+            recipe: recipe,
+            isGenerating: isGeneratingImage && !recipe.hasImage,
+          ),
+          const SizedBox(height: 16),
+        ],
         Text(
           recipe.title,
           style: theme.textTheme.headlineSmall
@@ -148,6 +164,116 @@ class RecipeView extends StatelessWidget {
   }
 }
 
+/// Large rounded hero image of the finished dish (or a loading placeholder
+/// while the AI photo is still being generated).
+class _HeroImage extends StatelessWidget {
+  const _HeroImage({required this.recipe, required this.isGenerating});
+
+  final Recipe recipe;
+  final bool isGenerating;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (isGenerating) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.primary.withValues(alpha: 0.12),
+              theme.colorScheme.secondary.withValues(alpha: 0.12),
+            ],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Plating your dish…',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Stack(
+        children: [
+          Image.memory(
+            recipe.imageBytes!,
+            height: 220,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.55),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 14,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome,
+                          size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI photo',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section({
     required this.icon,
@@ -155,7 +281,6 @@ class _Section extends StatelessWidget {
     required this.child,
     this.highlight = false,
   });
-
   final IconData icon;
   final String title;
   final Widget child;

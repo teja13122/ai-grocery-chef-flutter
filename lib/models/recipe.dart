@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:hive/hive.dart';
 
 /// A recipe produced by the AI, optionally persisted to Hive.
@@ -25,6 +27,9 @@ class Recipe {
   final int servings;
   final String nutritionNote;
 
+  /// AI-generated photo of the finished dish (PNG/JPEG bytes), if available.
+  final Uint8List? imageBytes;
+
   Recipe({
     required this.id,
     required this.title,
@@ -43,7 +48,33 @@ class Recipe {
     this.fiberG = 0,
     this.servings = 1,
     this.nutritionNote = '',
+    this.imageBytes,
   });
+
+  /// True once an AI dish photo has been attached.
+  bool get hasImage => imageBytes != null && imageBytes!.isNotEmpty;
+
+  /// Returns a copy with [imageBytes] replaced (used after image generation).
+  Recipe copyWith({Uint8List? imageBytes}) => Recipe(
+        id: id,
+        title: title,
+        ingredientsUsed: ingredientsUsed,
+        missingOptional: missingOptional,
+        steps: steps,
+        cookTimeMin: cookTimeMin,
+        difficulty: difficulty,
+        substitutions: substitutions,
+        safetyNotes: safetyNotes,
+        savedAt: savedAt,
+        calories: calories,
+        proteinG: proteinG,
+        carbsG: carbsG,
+        fatG: fatG,
+        fiberG: fiberG,
+        servings: servings,
+        nutritionNote: nutritionNote,
+        imageBytes: imageBytes ?? this.imageBytes,
+      );
 
   /// True when the model decided the pantry was not enough for a real meal.
   bool get isInsufficient =>
@@ -129,6 +160,12 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       fiberG: intOr(map['fiberG']),
       servings: intOr(map['servings'], 1),
       nutritionNote: (map['nutritionNote'] ?? '').toString(),
+      imageBytes: map['imageBytes'] is Uint8List
+          ? map['imageBytes'] as Uint8List
+          : (map['imageBytes'] is List
+              ? Uint8List.fromList(
+                  (map['imageBytes'] as List).cast<int>())
+              : null),
     );
   }
 
@@ -152,6 +189,7 @@ class RecipeAdapter extends TypeAdapter<Recipe> {
       'fiberG': obj.fiberG,
       'servings': obj.servings,
       'nutritionNote': obj.nutritionNote,
+      'imageBytes': obj.imageBytes,
     });
   }
 }

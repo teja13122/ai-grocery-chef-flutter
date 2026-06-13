@@ -103,11 +103,25 @@ class _RecipeCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor:
-                    theme.colorScheme.primary.withValues(alpha: 0.12),
-                child: Icon(Icons.restaurant, color: theme.colorScheme.primary),
-              ),
+              if (recipe.hasImage)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.memory(
+                    recipe.imageBytes!,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  ),
+                )
+              else
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor:
+                      theme.colorScheme.primary.withValues(alpha: 0.12),
+                  child:
+                      Icon(Icons.restaurant, color: theme.colorScheme.primary),
+                ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -122,7 +136,8 @@ class _RecipeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${recipe.cookTimeMin} min · ${recipe.difficulty}',
+                      '${recipe.cookTimeMin} min · ${recipe.difficulty}'
+                      '${recipe.calories > 0 ? ' · ${recipe.calories} kcal' : ''}',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: Colors.grey.shade600),
                     ),

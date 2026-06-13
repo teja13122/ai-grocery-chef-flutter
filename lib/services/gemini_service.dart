@@ -133,6 +133,68 @@ Rules:
         },
       };
 
+  /// Generates an appetizing photo of the finished dish.
+  ///
+  /// Returns the raw image bytes, or `null` if generation is unavailable or
+  /// fails — image generation is a nice-to-have and never blocks the recipe.
+  Future<Uint8List?> generateDishImage({
+    required String title,
+    required List<String> ingredients,
+  }) async {
+    if (!ApiConfig.isConfigured) return null;
+
+    final ingredientHint = ingredients.isEmpty
+        ? ''
+        : ' made with ${ingredients.take(6).join(', ')}';
+    final prompt =
+        'A professional, mouth-watering food photograph of "$title"'
+        '$ingredientHint. Beautifully plated on a clean dish, overhead 45-degree '
+        'angle, soft natural lighting, shallow depth of field, vibrant fresh '
+        'colors, restaurant-quality presentation. No text, no watermark.';
+
+    final uri = Uri.parse(
+      '$_baseUrl/${ApiConfig.imageModel}:generateContent?key=${ApiConfig.geminiApiKey}',
+    );
+    final body = jsonEncode({
+      'contents': [
+        {
+          'parts': [
+            {'text': prompt},
+          ],
+        },
+      ],
+      'generationConfig': {
+        'responseModalities': ['TEXT', 'IMAGE'],
+      },
+    });
+
+    try {
+      final response = await http
+          .post(uri,
+              headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 45));
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final candidates = data['candidates'] as List?;
+      final content = candidates?.first['content'] as Map<String, dynamic>?;
+      final parts = content?['parts'] as List?;
+      if (parts == null) return null;
+
+      for (final part in parts) {
+        final inline = (part['inlineData'] ?? part['inline_data'])
+            as Map<String, dynamic>?;
+        final encoded = inline?['data'] as String?;
+        if (encoded != null && encoded.isNotEmpty) {
+          return base64Decode(encoded);
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Posts [parts] to the model in JSON mode and returns the raw text payload.
   Future<String> _requestText(
     List<Map<String, dynamic>> parts, {

@@ -41,13 +41,51 @@ class RecipeScreen extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, RecipeProvider recipes) {
     if (recipes.isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Cooking up a recipe…'),
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.restaurant_menu,
+                  color: Colors.white, size: 40),
+            ),
+            const SizedBox(height: 24),
+            const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Cooking up your recipe…',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Balancing flavor, nutrition, and your calorie goal.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey.shade600),
+            ),
           ],
         ),
       );
@@ -71,7 +109,11 @@ class RecipeScreen extends StatelessWidget {
       );
     }
 
-    return RecipeView(recipe: recipe, padding: const EdgeInsets.fromLTRB(16, 16, 16, 96));
+    return RecipeView(
+      recipe: recipe,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      isGeneratingImage: recipes.isGeneratingImage,
+    );
   }
 }
 
